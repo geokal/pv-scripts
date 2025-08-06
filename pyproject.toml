@@ -1,0 +1,14 @@
+[project]
+name = "pv-scripts"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.10.5",
+    "numpy>=2.2.6",
+    "pandas>=2.3.1",
+    "pvlib>=0.13.0",
+    "requests>=2.32.4",
+    "tqdm>=4.67.1",
+]
