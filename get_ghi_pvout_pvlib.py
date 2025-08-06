@@ -9,8 +9,6 @@ for  Crete for the period 2010-2017.
 
 It fetches data from NREL SARAH 3 dataset , calculates performance ratio against known
 PVOUT data, and generates summary reports and charts.
-
-Author: Cline - AI Software Engineer
 Date: June 2025
 """
 
@@ -122,7 +120,6 @@ def load_sunny_portal_data(site_name):
                             var_name='Month', 
                             value_name='Specific Yield (kWh/kWp)')
         
-        # Convert 'Year' to numeric, coercing errors to NaN, then drop NaNs
         # Convert 'Year' to numeric, coercing errors to NaN, then drop NaNs
         df_melted['Year'] = pd.to_numeric(df_melted['Year'], errors='coerce')
         df_melted = df_melted.dropna(subset=['Year'])
@@ -299,7 +296,7 @@ def create_monthly_comparison_chart(pr_df, output_dir, site_name):
                     label='GHI (kWh/m²)', color='#FFC300', alpha=0.9)
     bars2 = ax1.bar(x, monthly_avg['PVOUT_kWh_kWp'], width,
                     label='PVOUT (kWh/kWp)', color='#007ACC', alpha=0.9)
-    bar3= ax1.bar(x, monthly_avg['Real_kWh_kWp'], width,
+    bars3= ax1.bar(x, monthly_avg['Real_kWh_kWp'], width,
                     label='Real_kWh_kWp', color="#9600CC", alpha=0.9)
     
     # The 'Real_kWh_kWp' bar is already defined and will be populated from pr_df
