@@ -1,7 +1,7 @@
 [project]
 name = "pv-scripts"
 version = "0.1.0"
-description = "Add your description here"
+description = "Use pvlib for extracting GHI and PVOUT for various sites in Crete "
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
