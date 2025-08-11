@@ -5,7 +5,15 @@ build/
 dist/
 wheels/
 *.egg-info
-
-# Virtual environments
+nasa_output/
+PLASTIKA_KRITIS_VIPE_pvlib_output/
+Moroni_pvlib_output/
+Dexameni_pvlib_output/
+Karavas_pvlib_output/
+Agioi_Deka_pvlib_output/
+Chorio_pvlib_output/
+nasa_output.zip
+pv_scripts.zip
+# Virtual environments  
 .venv
 .DS_Store
