@@ -10,5 +10,7 @@ dependencies = [
     "pandas>=2.3.1",
     "pvlib>=0.13.0",
     "requests>=2.32.4",
+    "seaborn>=0.13.2",
+    "statsmodels>=0.14.5",
     "tqdm>=4.67.1",
 ]
