@@ -48,6 +48,6 @@ header = "Specific PV System Yield [kWh/kWp];January;February;March;April;May;Ju
 # Save to CSV with UTF-8 encoding and semicolon delimiter
 with open("chorio_specific_yield.csv", "w", encoding="utf-8") as f:
     f.write(header + "\n")
-    df.to_csv(f, index=False, sep=";", lineterminator="\n")  # Changed line_terminator to lineterminator
+    df.to_csv(f, index=False, sep=";", lineterminator="\n")
 
 print("Successfully created 'chorio_specific_yield.csv' with correct formatting")

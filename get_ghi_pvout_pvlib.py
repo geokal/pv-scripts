@@ -84,14 +84,10 @@ def fetch_pvgis_data(site_name, config):
         if hourly_data.index.tz is not None:
             hourly_data = hourly_data.tz_convert(None)
         
-        # DEBUG: Print the range of years in the hourly_data index
-        if not hourly_data.empty:
-            print(f"DEBUG: Years in hourly_data index for {site_name}: {hourly_data.index.year.min()} - {hourly_data.index.year.max()}")
-        else:
-            print(f"DEBUG: hourly_data for {site_name} is empty.")
-
-        # Print column names for debugging
-        print(f"DEBUG: PVGIS hourly data columns for {site_name}: {list(hourly_data.columns)}")
+        # Check if data is available
+        if hourly_data.empty:
+            print(f"WARNING: No hourly data retrieved for {site_name}")
+            return None
         
         # Calculate GHI from available POA components if 'ghi' is not present
         if 'ghi' not in hourly_data.columns:
@@ -117,11 +113,12 @@ def fetch_pvgis_data(site_name, config):
         ghi_monthly = ghi_monthly[['Year', 'Month', 'GHI_kWh_m2']]
         
         # Save GHI data to separate CSV files
-        output_dir = f"{site_name.replace(' ', '_')}_pvlib_output"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        # Sanitize site_name to prevent path traversal attacks
+        safe_site_name = "".join(c for c in site_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        output_dir = f"{safe_site_name.replace(' ', '_')}_pvlib_output"
+        os.makedirs(output_dir, exist_ok=True)
             
-        ghi_path = os.path.join(output_dir, f'{site_name.replace(" ", "_")}_ghi_data_pvlib_2012_2017.csv')
+        ghi_path = os.path.join(output_dir, f'{safe_site_name.replace(" ", "_")}_ghi_data_pvlib_2012_2017.csv')
         ghi_monthly.to_csv(ghi_path, index=False)
         print(f"✅ GHI data saved to {ghi_path}")
         
@@ -173,7 +170,9 @@ def load_sunny_portal_data(site_name):
     Load specific yield data from sunny_portal_data folder for a given site.
     Assumes CSV files are named as 'site_name_specific_yield.csv'.
     """
-    file_name = f"{site_name.replace(' ', '_')}_specific_yield.csv"
+    # Sanitize site_name to prevent path traversal attacks
+    safe_site_name = "".join(c for c in site_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    file_name = f"{safe_site_name.replace(' ', '_')}_specific_yield.csv"
     file_path = os.path.join("sunny_portal_data", file_name)
     
     if not os.path.exists(file_path):
@@ -183,17 +182,13 @@ def load_sunny_portal_data(site_name):
     try:
         # Read the CSV, using semicolon as separator and setting the header to the first row (index 0)
         df = pd.read_csv(file_path, sep=';', header=0)
-        print(f"DEBUG: Initial DataFrame head for {site_name}:\n{df.head()}")
-        
         # Rename the first column to 'Year' explicitly, as it might be 'Unnamed: 0'
         # This handles cases where the first column might not be named 'Year' but contains year data
         if df.columns[0] not in ['Year', 'year', 'Έτος']: # Added 'Έτος' for Greek files
             df = df.rename(columns={df.columns[0]: 'Year'})
-        print(f"DEBUG: DataFrame head after renaming 'Year' for {site_name}:\n{df.head()}")
         
         # Drop the last four rows which contain summary statistics
         df = df.iloc[:-4]
-        print(f"DEBUG: DataFrame head after dropping summary rows for {site_name}:\n{df.head()}")
         
         # Melt the DataFrame to transform monthly columns into rows
         # 'Year' is the ID variable, and month names are value variables
@@ -208,19 +203,16 @@ def load_sunny_portal_data(site_name):
                             value_vars=value_vars,
                             var_name='Month', 
                             value_name='Specific Yield (kWh/kWp)')
-        print(f"DEBUG: Melted DataFrame head for {site_name}:\n{df_melted.head()}")
         
         # Convert 'Year' to numeric, coercing errors to NaN, then drop NaNs
         df_melted['Year'] = pd.to_numeric(df_melted['Year'], errors='coerce')
         df_melted = df_melted.dropna(subset=['Year'])
-        print(f"DEBUG: Melted DataFrame head after Year conversion/dropna for {site_name}:\n{df_melted.head()}")
         
         # Convert 'Specific Yield (kWh/kWp)' to numeric, handling commas and coercing errors to NaN, then fill NaN with 0
         df_melted['Specific Yield (kWh/kWp)'] = pd.to_numeric(
             df_melted['Specific Yield (kWh/kWp)'].astype(str).str.replace(',', '.'), 
             errors='coerce'
         ).fillna(0)
-        print(f"DEBUG: Melted DataFrame head after Specific Yield conversion/fillna for {site_name}:\n{df_melted.head()}")
         
         # Map month names to month numbers (including Greek month names)
         month_name_to_num = {
@@ -236,7 +228,6 @@ def load_sunny_portal_data(site_name):
         # Convert 'Month_Num' to numeric, coercing errors to NaN, then drop NaNs
         df_melted['Month_Num'] = pd.to_numeric(df_melted['Month_Num'], errors='coerce')
         df_melted = df_melted.dropna(subset=['Month_Num'])
-        print(f"DEBUG: Melted DataFrame head after Month_Num conversion/dropna for {site_name}:\n{df_melted.head()}")
 
         # Ensure 'Year' and 'Month_Num' are integers before converting to string for datetime
         df_melted['Year'] = df_melted['Year'].astype(int)
@@ -249,14 +240,11 @@ def load_sunny_portal_data(site_name):
         
         # Set 'Date' as index and sort
         df_melted = df_melted.set_index('Date').sort_index()
-        print(f"DEBUG: Melted DataFrame head after Date creation/index set for {site_name}:\n{df_melted.head()}")
         
         # Calculate monthly average specific yield across all years
         monthly_avg_specific_yield = df_melted.groupby(df_melted.index.month)['Specific Yield (kWh/kWp)'].mean()
         
         print(f"✅ Sunny Portal data loaded for {site_name}: {len(monthly_avg_specific_yield)} monthly average records")
-        print(f"DEBUG: Sunny Portal monthly average data keys (first 5): {list(monthly_avg_specific_yield.index[:5])}")
-        print(f"DEBUG: Sunny Portal monthly average data values (first 5): {list(monthly_avg_specific_yield.values[:5])}")
         return monthly_avg_specific_yield.to_dict()
         
     except Exception as e:
@@ -288,8 +276,7 @@ def calculate_performance_ratio(poa_df, latitude, longitude, sunny_portal_data, 
         if config.get("trackingtype") == 0:
             optional_kwargs["mountingplace"] = "free"
 
-        print(f"DEBUG: PVGIS hourly positional args: lat={latitude}, lon={longitude}, startyear=2012, endyear=2017, raddatabase={pvgis_database}")
-        print(f"DEBUG: PVGIS hourly optional kwargs: {optional_kwargs}")
+        # Fetch PVGIS data with configured parameters
 
         # Fetch hourly data, which includes PVOUT ('P' column)
         # Pass required positional arguments directly, and optional parameters via **kwargs
@@ -352,17 +339,18 @@ def save_results(poa_df, pr_df, site_name):
     """
     Save results to CSV and JSON files.
     """
-    output_dir = f"{site_name.replace(' ', '_')}_pvlib_output"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # Sanitize site_name to prevent path traversal attacks
+    safe_site_name = "".join(c for c in site_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    output_dir = f"{safe_site_name.replace(' ', '_')}_pvlib_output"
+    os.makedirs(output_dir, exist_ok=True)
 
     # Save POA data
-    poa_path = os.path.join(output_dir, f'{site_name.replace(" ", "_")}_poa_data_pvlib_2012_2017.csv')
+    poa_path = os.path.join(output_dir, f'{safe_site_name.replace(" ", "_")}_poa_data_pvlib_2012_2017.csv')
     poa_df.to_csv(poa_path, index=False)
     print(f"✅ POA data saved to {poa_path}")
     
     # Save Performance Ratio analysis
-    pr_path = os.path.join(output_dir, f'{site_name.replace(" ", "_")}_performance_ratio_pvlib_analysis.csv')
+    pr_path = os.path.join(output_dir, f'{safe_site_name.replace(" ", "_")}_performance_ratio_pvlib_analysis.csv')
     pr_df.to_csv(pr_path, index=False)
     print(f"✅ Performance Ratio analysis saved to {pr_path}")
     
@@ -377,7 +365,7 @@ def save_results(poa_df, pr_df, site_name):
     }
     
     # Save summary
-    summary_path = os.path.join(output_dir, f'{site_name.replace(" ", "_")}_ghi_summary_pvlib.json')
+    summary_path = os.path.join(output_dir, f'{safe_site_name.replace(" ", "_")}_ghi_summary_pvlib.json')
     with open(summary_path, 'w') as f:
         json.dump(summary_stats, f, indent=2)
     
@@ -440,7 +428,9 @@ def create_monthly_comparison_chart(pr_df, output_dir, site_name):
     ax2.legend()
     
     plt.tight_layout(pad=2.0)
-    chart_path = os.path.join(output_dir, f'{site_name.replace(" ", "_")}_ghi_pvout_analysis_pvlib.png')
+    # Sanitize site_name to prevent path traversal attacks
+    safe_site_name = "".join(c for c in site_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    chart_path = os.path.join(output_dir, f'{safe_site_name.replace(" ", "_")}_ghi_pvout_analysis_pvlib.png')
     plt.savefig(chart_path, dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
     
